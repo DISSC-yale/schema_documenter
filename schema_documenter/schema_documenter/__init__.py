@@ -7,6 +7,6 @@ including CSV, Excel, JSON, Stata, Parquet, and RDS files.
 
 __version__ = "0.1.0"
 
-from .schema_documenter import SchemaDocumenter
+from .schema_documenter import SchemaDocumenter, main
 
 __all__ = ["SchemaDocumenter"]
