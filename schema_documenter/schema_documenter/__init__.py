@@ -9,4 +9,4 @@ __version__ = "0.1.0"
 
 from .schema_documenter import SchemaDocumenter
 
-__all__ = ['SchemaDocumenter'] 
+__all__ = ["SchemaDocumenter"]

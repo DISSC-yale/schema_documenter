@@ -1,0 +1,10 @@
+README.md
+pyproject.toml
+schema_documenter.egg-info/PKG-INFO
+schema_documenter.egg-info/SOURCES.txt
+schema_documenter.egg-info/dependency_links.txt
+schema_documenter.egg-info/top_level.txt
+schema_documenter/schema_documenter/__init__.py
+schema_documenter/schema_documenter/schema_documenter.py
+schema_documenter/tests/conftest.py
+schema_documenter/tests/test_schema_documenter.py
