@@ -111,18 +111,24 @@ class SchemaDocumenter:
                     schema_info["error"] = str(e)
                     return schema_info
             elif file_path.suffix.lower() == ".dta":
-                try:
-                    # Try reading with default encoding first
-                    df, meta = pyreadstat.read_dta(file_path)
-                except UnicodeDecodeError:
-                    # If UTF-8 fails, try with latin-1 encoding
-                    logger.warning(
-                        f"UTF-8 decoding failed for {file_path}, trying latin-1 encoding"
-                    )
-                    df, meta = pyreadstat.read_dta(file_path, encoding="latin-1")
-                except Exception as e:
-                    logger.error(f"Error reading Stata file {file_path}: {str(e)}")
-                    schema_info["error"] = str(e)
+                encodings = ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1', 'ascii']
+                df = None
+                last_error = None
+                
+                for encoding in encodings:
+                    try:
+                        df, meta = pyreadstat.read_dta(file_path, encoding=encoding)
+                        logger.info(f"Successfully read Stata file with {encoding} encoding")
+                        break
+                    except Exception as e:
+                        last_error = e
+                        logger.warning(f"Failed to read Stata file with {encoding} encoding: {str(e)}")
+                        continue
+                
+                if df is None:
+                    error_msg = f"Failed to read Stata file with any supported encoding. Last error: {str(last_error)}"
+                    logger.error(error_msg)
+                    schema_info['error'] = error_msg
                     return schema_info
             elif file_path.suffix.lower() == ".parquet":
                 # Check if file is empty
@@ -191,9 +197,32 @@ class SchemaDocumenter:
             logger.error(f"Error saving schema to {output_path}: {str(e)}")
             raise
 
+    def is_schema_needed(self, data_file: Path, schema_file: Path) -> bool:
+        """
+        Check if a schema file needs to be generated or updated.
+        
+        Args:
+            data_file (Path): Path to the data file
+            schema_file (Path): Path to the schema file
+            
+        Returns:
+            bool: True if schema needs to be generated/updated, False otherwise
+        """
+        if not schema_file.exists():
+            return True
+            
+        try:
+            data_mtime = data_file.stat().st_mtime
+            schema_mtime = schema_file.stat().st_mtime
+            return data_mtime > schema_mtime
+        except Exception as e:
+            logger.warning(f"Error checking file timestamps for {data_file}: {str(e)}")
+            return True
+
     def process_directory(self) -> None:
         """
         Process all supported files in the input directory and create schema files.
+        Only processes files where the schema is older than the data file or doesn't exist.
         """
         if self.input_path.is_file():
             files = [self.input_path]
@@ -205,11 +234,15 @@ class SchemaDocumenter:
             ]
 
         for file_path in files:
-            logger.info(f"Processing {file_path}")
-            schema_info = self.get_schema(file_path)
-
             # Create output path with .schema extension
             output_path = file_path.with_suffix(file_path.suffix + ".schema")
+            
+            if not self.is_schema_needed(file_path, output_path):
+                logger.info(f"Skipping {file_path} - schema is up to date")
+                continue
+                
+            logger.info(f"Processing {file_path}")
+            schema_info = self.get_schema(file_path)
             self.save_schema(schema_info, output_path)
 
 def main():
