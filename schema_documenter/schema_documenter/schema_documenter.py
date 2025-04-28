@@ -211,3 +211,34 @@ class SchemaDocumenter:
             # Create output path with .schema extension
             output_path = file_path.with_suffix(file_path.suffix + ".schema")
             self.save_schema(schema_info, output_path)
+
+def main():
+    """
+    Main entry point for the schema documenter command-line tool.
+    Processes all provided files and generates schema documentation.
+    """
+    import sys
+    import logging
+    
+    # Set up logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s'
+    )
+    
+    if len(sys.argv) < 2:
+        print("Usage: schema-documenter <file1> [file2 ...]")
+        sys.exit(1)
+    
+    # Process each file
+    for file_path in sys.argv[1:]:
+        try:
+            documenter = SchemaDocumenter(file_path)
+            documenter.process_directory()
+            logging.info(f"Successfully processed {file_path}")
+        except Exception as e:
+            logging.error(f"Error processing {file_path}: {str(e)}")
+            sys.exit(1)
+
+if __name__ == "__main__":
+    main()

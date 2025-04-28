@@ -1,0 +1,2 @@
+[console_scripts]
+schema-documenter = schema_documenter.schema_documenter.schema_documenter:main

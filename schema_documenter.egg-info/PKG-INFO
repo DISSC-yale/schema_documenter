@@ -1,9 +1,14 @@
 Metadata-Version: 2.4
 Name: schema-documenter
 Version: 0.1.0
-Summary: Add your description here
-Requires-Python: >=3.13
+Summary: A tool for documenting dataset schemas
+Requires-Python: >=3.8
 Description-Content-Type: text/markdown
+Requires-Dist: pandas>=1.3.0
+Requires-Dist: pyreadstat>=1.1.0
+Requires-Dist: pyarrow>=6.0.0
+Requires-Dist: rpy2>=3.5.0
+Requires-Dist: numpy>=1.21.0
 
 # Schema Documenter
 
