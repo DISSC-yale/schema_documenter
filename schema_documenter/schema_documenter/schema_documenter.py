@@ -105,10 +105,12 @@ class SchemaDocumenter:
                 except json.JSONDecodeError as e:
                     logger.error(f"Error decoding JSON file {file_path}: {str(e)}")
                     schema_info["error"] = f"Invalid JSON format: {str(e)}"
+                    schema_info["missing_columns"] = True
                     return schema_info
                 except Exception as e:
                     logger.error(f"Error processing JSON file {file_path}: {str(e)}")
                     schema_info["error"] = str(e)
+                    schema_info["missing_columns"] = True
                     return schema_info
             elif file_path.suffix.lower() == ".dta":
                 encodings = ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1', 'ascii', 'macroman']
@@ -136,18 +138,23 @@ class SchemaDocumenter:
                     error_msg = f"Failed to read Stata file with any supported encoding. Last error: {str(last_error)}"
                     logger.error(error_msg)
                     schema_info['error'] = error_msg
+                    schema_info['missing_columns'] = True
                     return schema_info
                 
                 # Add variable labels and formats to schema info
                 if meta is not None:
-                    schema_info['variable_labels'] = meta.variable_value_labels
-                    schema_info['value_labels'] = meta.value_labels
-                    schema_info['variable_formats'] = meta.variable_formats
+                    # Safely access metadata attributes with fallback to empty dict
+                    schema_info['variable_labels'] = getattr(meta, 'variable_labels', {})
+                    schema_info['value_labels'] = getattr(meta, 'value_labels', {})
+                    schema_info['variable_formats'] = getattr(meta, 'variable_formats', {})
+                    schema_info['variable_storage_types'] = getattr(meta, 'variable_storage_types', {})
+                    schema_info['variable_display_widths'] = getattr(meta, 'variable_display_widths', {})
             elif file_path.suffix.lower() == ".parquet":
                 # Check if file is empty
                 if os.path.getsize(file_path) == 0:
                     logger.warning(f"Parquet file {file_path} is empty")
                     schema_info["error"] = "File is empty"
+                    schema_info["missing_columns"] = True
                     return schema_info
                 df = pd.read_parquet(file_path)
             elif file_path.suffix.lower() == ".rds":
@@ -256,7 +263,13 @@ class SchemaDocumenter:
                 
             logger.info(f"Processing {file_path}")
             schema_info = self.get_schema(file_path)
-            self.save_schema(schema_info, output_path)
+            
+            # Only save schema if there are no errors
+            if not schema_info.get("error") and not schema_info.get("missing_columns"):
+                self.save_schema(schema_info, output_path)
+                logger.info(f"Schema saved to {output_path}")
+            else:
+                logger.error(f"Failed to process {file_path} - not saving schema due to errors")
 
 def main():
     """
