@@ -111,13 +111,20 @@ class SchemaDocumenter:
                     schema_info["error"] = str(e)
                     return schema_info
             elif file_path.suffix.lower() == ".dta":
-                encodings = ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1', 'ascii']
+                encodings = ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1', 'ascii', 'macroman']
                 df = None
                 last_error = None
                 
                 for encoding in encodings:
                     try:
-                        df, meta = pyreadstat.read_dta(file_path, encoding=encoding)
+                        # Try reading with specific options for better handling of mixed types
+                        df, meta = pyreadstat.read_dta(
+                            file_path,
+                            encoding=encoding,
+                            apply_value_formats=True,
+                            formats_as_category=True,
+                            dates_as_pandas_datetime=True
+                        )
                         logger.info(f"Successfully read Stata file with {encoding} encoding")
                         break
                     except Exception as e:
@@ -130,6 +137,12 @@ class SchemaDocumenter:
                     logger.error(error_msg)
                     schema_info['error'] = error_msg
                     return schema_info
+                
+                # Add variable labels and formats to schema info
+                if meta is not None:
+                    schema_info['variable_labels'] = meta.variable_value_labels
+                    schema_info['value_labels'] = meta.value_labels
+                    schema_info['variable_formats'] = meta.variable_formats
             elif file_path.suffix.lower() == ".parquet":
                 # Check if file is empty
                 if os.path.getsize(file_path) == 0:
